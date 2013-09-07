@@ -1,7 +1,7 @@
 /*  Noughts and Crosses
 
   Крестики-нолики
-  Version 0.1 - Alpha
+  Version 0.2 - Alpha
 
   Copyright 2013 Konstantin Zyryanov <post.herzog@gmail.com>
   
@@ -34,21 +34,27 @@ int main_menu();
 bool check();
 
 int x, y, bad_x, bad_y, i, j;
+//TODO: Убрать в настройки
+int size=3;
 char array[3][3], *array_p;
 
-int main() {
+int main()
+{
+//Инициализация ncurses
 	setlocale(LC_CTYPE, "ru_RU.UTF8");
 	initscr();
 	curs_set(0);
 	keypad(stdscr, true);
 	echo();
+//Инициализация генератора случайных чисел
+	srand(time(0));
 	while (main_menu())
 	{
 		clear();
 		start_color();
 		init_pair(1, COLOR_RED, COLOR_BLACK);
 		init_pair(2, COLOR_BLUE, COLOR_BLACK);
-	//Инициализация и отрисовка первоначального игрового поля
+//Инициализация и отрисовка первоначального игрового поля
 		chtype space;
 		space=' '|A_UNDERLINE;
 		move(4,29);
@@ -94,19 +100,17 @@ int main() {
 		addch(space); addch(space); addch(space); addch(space); addch(space);
 		addch('|');
 		refresh();
-	//Инициализация массива значений квадратов игрового поля
+//Инициализация массива значений квадратов игрового поля
 		array_p=array[0];
-		for (i=0; i<3; i++)
+		for (i=0; i < size; i++)
 		{
-			for (j=0; j<3; j++)
+			for (j=0; j < size; j++)
 			{
 				strcpy(array_p, " ");
 				array_p++;
 			}
 		}
-	//Инициализация генератора случайных чисел
-		srand(time(0));
-	//Выбор игроком крестиков или ноликов
+//Выбор игроком крестиков или ноликов
 		char side[20];
 		bool player_turn;
 		move(17,5);
@@ -138,7 +142,7 @@ int main() {
 				player_turn=false;
 			}
 		}
-	//Игра
+//Игра
 		bool win=false;
 		while (!win)
 		{
@@ -201,8 +205,6 @@ void player(char side)
 			attron(A_BOLD);
 			printw("Ошибка! Задайте координаты ещё раз!");
 			refresh();
-			//attroff(A_BOLD);
-			//attroff(COLOR_PAIR(1));
 			attrset(A_NORMAL);
 		}
 		move(17,5);
@@ -220,7 +222,6 @@ void player(char side)
 			refresh();
 			bad_x=getch();
 		}
-
 		move(19,11);
 		printw("y:");
 		refresh();
@@ -263,17 +264,260 @@ void cpu(char side)
 	move(16,5);
 	printw("Думаю...");
 	refresh();
+//Проверка на возможность победы игрока на следующем ходу
+	char other_side;
+	int local_x=0, local_y=0, repeat, space, space_x, space_y;
+	int find_possible_fail=0;
+	if (side == 'X')
+		other_side='O';
+	else
+		other_side='X';
+//Проверка по горизонтали
+	for (i=0; i < size; i++)
+	{
+		local_x=0; repeat=0; space=0;
+		if (array[local_y][local_x] == other_side && array[local_y][local_x] == array[local_y][size-1])
+			repeat++;
+		if (array[local_y][size-1] == ' ')
+		{
+			space++;
+			space_x=size-1; space_y=local_y;
+		}
+		for (j=0; j < size-1; j++)
+		{
+			if (array[local_y][local_x] == other_side && array[local_y][local_x] == array[local_y][local_x+1])
+				repeat++;
+			if (array[local_y][local_x] == ' ')
+			{
+				space++;
+				space_x=local_x; space_y=local_y;
+			}
+			local_x++;
+		}
+		if (size-repeat == 2 && space == 1)
+		{
+			y=space_y; x=space_x;
+			find_possible_fail=1;
+		}
+		local_y++;
+	}
+//Проверка по вертикали
+	local_x=0; local_y=0;
+	for (i=0; i < size; i++)
+	{
+		local_y=0; repeat=0; space=0;
+		if (array[local_y][local_x] == other_side && array[local_y][local_x] == array[size-1][local_x])
+			repeat++;
+		if (array[size-1][local_x] == ' ')
+		{
+			space++;
+			space_x=local_x; space_y=size-1;
+		}
+		for (j=0; j < size-1; j++)
+		{
+			if (array[local_y][local_x] == other_side && array[local_y][local_x] == array[local_y+1][local_x])
+				repeat++;
+			if (array[local_y][local_x] == ' ')
+			{
+				space++;
+				space_x=local_x; space_y=local_y;
+			}
+			local_y++;
+		}
+		if (size-repeat == 2 && space == 1)
+		{
+			x=space_x; y=space_y;
+			find_possible_fail=2;
+		}
+		local_x++;
+	}
+//Проверка по диагоналям
+	local_x=0; local_y=0; repeat=0; space=0;
+	if (array[local_y][local_x] == other_side && array[local_y][local_x] == array[size-1][size-1])
+			repeat++;
+	if (array[size-1][size-1] == ' ')
+	{
+		space++;
+		space_x=size-1; space_y=size-1;
+	}
+	for (i=0; i < size-1; i++)
+	{
+		if (array[local_y][local_x] == other_side && array[local_y][local_x] == array[local_y+1][local_x+1])
+			repeat++;
+		if (array[local_y][local_x] == ' ')
+		{
+			space++;
+			space_x=local_x; space_y=local_y;
+		}
+		if (size-repeat == 2 && space == 1)
+		{
+			x=space_x; y=space_y;
+			find_possible_fail=3;
+		}
+		local_x++; local_y++;
+	}
+	local_x=0; local_y=0; repeat=0; space=0;
+	if (array[local_y][size-1] == other_side && array[local_y][size-1] == array[size-1][local_x])
+			repeat++;
+	if (array[size-1][local_x] == ' ')
+	{
+		space++;
+		space_x=local_x; space_y=size-1;
+	}
+	local_x=2;
+	for (i=0; i < size-1; i++)
+	{
+		if (array[local_y][local_x] == other_side && array[local_y][local_x] == array[local_y+1][local_x-1])
+			repeat++;
+		if (array[local_y][local_x] == ' ')
+		{
+			space++;
+			space_x=local_x; space_y=local_y;
+		}
+		if (size-repeat == 2 && space == 1)
+		{
+			x=space_x; y=space_y;
+			find_possible_fail=3;
+		}
+		local_x--; local_y++;
+	}
+//Проверка возможности победы компьютера на данном ходу
+/*char other_side;
+	int local_x=0, local_y=0, repeat, space, space_x, space_y;
+	int find_possible_fail=0;
+	if (side == 'X')
+		other_side='O';
+	else
+		other_side='X';*/
+//Проверка по горизонтали
+	for (i=0; i < size; i++)
+	{
+		local_x=0; repeat=0; space=0;
+		if (array[local_y][local_x] == side && array[local_y][local_x] == array[local_y][size-1])
+			repeat++;
+		if (array[local_y][size-1] == ' ')
+		{
+			space++;
+			space_x=size-1; space_y=local_y;
+		}
+		for (j=0; j < size-1; j++)
+		{
+			if (array[local_y][local_x] == side && array[local_y][local_x] == array[local_y][local_x+1])
+				repeat++;
+			if (array[local_y][local_x] == ' ')
+			{
+				space++;
+				space_x=local_x; space_y=local_y;
+			}
+			local_x++;
+		}
+		if (size-repeat == 2 && space == 1)
+		{
+			y=space_y; x=space_x;
+			find_possible_fail=4;
+		}
+		local_y++;
+	}
+//Проверка по вертикали
+	local_x=0; local_y=0;
+	for (i=0; i < size; i++)
+	{
+		local_y=0; repeat=0; space=0;
+		if (array[local_y][local_x] == side && array[local_y][local_x] == array[size-1][local_x])
+			repeat++;
+		if (array[size-1][local_x] == ' ')
+		{
+			space++;
+			space_x=local_x; space_y=size-1;
+		}
+		for (j=0; j < size-1; j++)
+		{
+			if (array[local_y][local_x] == side && array[local_y][local_x] == array[local_y+1][local_x])
+				repeat++;
+			if (array[local_y][local_x] == ' ')
+			{
+				space++;
+				space_x=local_x; space_y=local_y;
+			}
+			local_y++;
+		}
+		if (size-repeat == 2 && space == 1)
+		{
+			x=space_x; y=space_y;
+			find_possible_fail=5;
+		}
+		local_x++;
+	}
+//Проверка по диагоналям
+	local_x=0; local_y=0; repeat=0; space=0;
+	if (array[local_y][local_x] == side && array[local_y][local_x] == array[size-1][size-1])
+			repeat++;
+	if (array[size-1][size-1] == ' ')
+	{
+		space++;
+		space_x=size-1; space_y=size-1;
+	}
+	for (i=0; i < size-1; i++)
+	{
+		if (array[local_y][local_x] == side && array[local_y][local_x] == array[local_y+1][local_x+1])
+			repeat++;
+		if (array[local_y][local_x] == ' ')
+		{
+			space++;
+			space_x=local_x; space_y=local_y;
+		}
+		if (size-repeat == 2 && space == 1)
+		{
+			x=space_x; y=space_y;
+			find_possible_fail=6;
+		}
+		local_x++; local_y++;
+	}
+	local_x=0; local_y=0; repeat=0; space=0;
+	if (array[local_y][size-1] == side && array[local_y][size-1] == array[size-1][local_x])
+			repeat++;
+	if (array[size-1][local_x] == ' ')
+	{
+		space++;
+		space_x=local_x; space_y=size-1;
+	}
+	local_x=2;
+	for (i=0; i < size-1; i++)
+	{
+		if (array[local_y][local_x] == side && array[local_y][local_x] == array[local_y+1][local_x-1])
+			repeat++;
+		if (array[local_y][local_x] == ' ')
+		{
+			space++;
+			space_x=local_x; space_y=local_y;
+		}
+		if (size-repeat == 2 && space == 1)
+		{
+			x=space_x; y=space_y;
+			find_possible_fail=6;
+		}
+		local_x--; local_y++;
+	}
+//Простой перебор случайных вариантов
 	bool think=false;
+	for (i=0; i < 3; i++)
+	{
+		if (x == (i+48))
+			x=i;
+		if (y == (i+48))
+			y=i;
+	}
 	while (!think)
 	{
 		do
 		{
-			bad_x=rand()%3;
-			bad_y=rand()%3;
-		} while (array[bad_y][bad_x] != ' ');
+			if (find_possible_fail == 0)
+			{
+				x=rand()%3;
+				y=rand()%3;
+			}
+		} while (array[y][x] != ' ');
 		think=true;
-		x=bad_x;
-		y=bad_y;
 	}
 	array_p=&array[y][x];
 	*array_p=side;
