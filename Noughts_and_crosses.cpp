@@ -1,7 +1,7 @@
 /*  Noughts and Crosses
 
   Крестики-нолики
-  Version 0.3 - Alpha
+  Version 0.3.1 - Alpha
 
   Copyright 2013 Konstantin Zyryanov <post.herzog@gmail.com>
   
@@ -29,7 +29,8 @@
 #include <ctime>
 using namespace std;
 
-void player(char side, char **array), cpu(char side, char **array), winner(int line, int line_number, int player_win, char symbol), single_game(), campaign();
+void cpu(char side, char **array), winner(int line, int line_number, int player_win, char symbol), single_game(), campaign();
+int player(char side, char **array);
 int main_menu(), sub_menu(int menu);
 bool check(int player_win, char **array);
 
@@ -58,7 +59,7 @@ int main()
 }
 
 //Ход игрока
-void player(char side, char **array)
+int player(char side, char **array)
 {
 	bool error=false;
 	time_t timer, timer_2;
@@ -93,11 +94,7 @@ void player(char side, char **array)
 		}
 		move(18,5);
 		printw("Ваш ход.");
-		move(19,11);
-		printw("x:");
-		refresh();
-		x=getch();
-		while (!isdigit(x) || x < 49 || x > size+48)
+		do
 		{
 			move(19,0);
 			clrtoeol();
@@ -105,12 +102,12 @@ void player(char side, char **array)
 			printw("x:");
 			refresh();
 			x=getch();
-		}
-		move(20,11);
-		printw("y:");
-		refresh();
-		y=getch();
-		while (!isdigit(y) || y < 49 || y > size+48)
+			if (x == 27)
+				break;
+		} while (!isdigit(x) || x < 49 || x > size+48);
+		if (x == 27)
+			return 1;
+		do
 		{
 			move(20,0);
 			clrtoeol();
@@ -118,7 +115,11 @@ void player(char side, char **array)
 			printw("y:");
 			refresh();
 			y=getch();
-		}
+			if (y == 27)
+				break;
+		} while (!isdigit(y) || y < 49 || y > size+48);
+		if (y == 27)
+			return 1;
 		error=true;
 	} while (array[y-49][x-49] != ' ');
 	array[y-49][x-49]=side;
@@ -135,6 +136,7 @@ void player(char side, char **array)
 		arr_x=x_begin+3;
 	}
 	refresh();
+	return 0;
 }
 
 //Ход компьютера
@@ -247,7 +249,7 @@ void cpu(char side, char **array)
 			space++;
 			space_x=local_x; space_y=size-1;
 		}
-		local_x=2;
+		local_x=size-1;
 		for (i=0; i < size-1; i++)
 		{
 			if (array[local_y][local_x] == other_side && array[local_y][local_x] == array[local_y+1][local_x-1])
@@ -361,7 +363,7 @@ void cpu(char side, char **array)
 			space++;
 			space_x=local_x; space_y=size-1;
 		}
-		local_x=2;
+		local_x=size-1;
 		for (i=0; i < size-1; i++)
 		{
 			if (array[local_y][local_x] == side && array[local_y][local_x] == array[local_y+1][local_x-1])
@@ -478,7 +480,7 @@ bool check(int player_win, char **array)
 	local_x=0; local_y=0; repeat=0;
 	if (array[local_y][size-1] != ' ' && array[local_y][size-1] == array[size-1][local_x])
 			repeat++;
-	local_x=2;
+	local_x=size-1;
 	for (i=0; i < size-1; i++)
 	{
 		if (array[local_y][local_x] != ' ' && array[local_y][local_x] == array[local_y+1][local_x-1])
@@ -1106,12 +1108,14 @@ void single_game()
 			player_turn=false;
 	}
 //Игра
-	bool win=false;
+	bool win=false, quit;
 	while (!win)
 	{
 		if (player_turn)
 		{
-			player('X', array);
+			quit=player('X', array);
+			if (quit)
+				break;
 			win=check(1, array);
 			if (win)
 				break;
@@ -1124,11 +1128,15 @@ void single_game()
 			win=check(0, array);
 			if (win)
 				break;
-			player('O', array);
+			quit=player('O', array);
+			if (quit)
+				break;
 			win=check(1, array);
 		}
 	}
-	getch();
+//FIXME: Найти другой способ для быстрого выхода
+	if (!quit)
+		getch();
 	attrset(A_NORMAL);
 	for (i=0; i < size; i++)
 	{
